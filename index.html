@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大聲公 PNG 產生器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自訂卷軸樣式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col lg:flex-row overflow-hidden text-gray-800 font-sans">
+
+    <!-- 左側/上半部：控制面板 (可垂直滾動) -->
+    <div class="w-full lg:w-5/12 flex-1 lg:h-full flex flex-col min-h-0 bg-white shadow-xl z-10 shrink-0 border-b lg:border-b-0 lg:border-r border-gray-200">
+        
+        <!-- 標題區 -->
+        <div class="p-4 border-b border-gray-200 bg-blue-50">
+            <h1 class="text-2xl font-bold text-blue-800 mb-3">📢 大聲公 PNG 產生器</h1>
+            <div class="flex items-center gap-2">
+                <label for="main-title" class="font-semibold whitespace-nowrap">專案標題：</label>
+                <input type="text" id="main-title" placeholder="例如：直播素材" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            
+            <!-- 虛擬桌布方向位置設定 -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h2 class="text-lg font-bold mb-3 border-b pb-2">📍 虛擬桌布位置調整 (4K 比例)</h2>
+                <p class="text-sm text-gray-500 mb-3">使用調桿調整各方向文字在畫布中的預設出現位置 (X 為左右，Y 為上下)</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <!-- [上] 位置 -->
+                    <div class="bg-white p-2 border rounded">
+                        <div class="font-bold text-blue-600 mb-1">[上] 位置 (預設中間偏下)</div>
+                        <div class="flex items-center gap-2"><span class="w-4">X</span><input type="range" id="pos-up-x" class="pos-slider w-full" min="0" max="100" value="50"></div>
+                        <div class="flex items-center gap-2 mt-1"><span class="w-4">Y</span><input type="range" id="pos-up-y" class="pos-slider w-full" min="0" max="100" value="75"></div>
+                    </div>
+                    <!-- [下] 位置 -->
+                    <div class="bg-white p-2 border rounded">
+                        <div class="font-bold text-green-600 mb-1">[下] 位置 (預設中間偏上)</div>
+                        <div class="flex items-center gap-2"><span class="w-4">X</span><input type="range" id="pos-down-x" class="pos-slider w-full" min="0" max="100" value="50"></div>
+                        <div class="flex items-center gap-2 mt-1"><span class="w-4">Y</span><input type="range" id="pos-down-y" class="pos-slider w-full" min="0" max="100" value="25"></div>
+                    </div>
+                    <!-- [左] 位置 -->
+                    <div class="bg-white p-2 border rounded">
+                        <div class="font-bold text-yellow-600 mb-1">[左] 位置 (預設偏右側)</div>
+                        <div class="flex items-center gap-2"><span class="w-4">X</span><input type="range" id="pos-left-x" class="pos-slider w-full" min="0" max="100" value="80"></div>
+                        <div class="flex items-center gap-2 mt-1"><span class="w-4">Y</span><input type="range" id="pos-left-y" class="pos-slider w-full" min="0" max="100" value="50"></div>
+                    </div>
+                    <!-- [右] 位置 -->
+                    <div class="bg-white p-2 border rounded">
+                        <div class="font-bold text-red-600 mb-1">[右] 位置 (預設偏左側)</div>
+                        <div class="flex items-center gap-2"><span class="w-4">X</span><input type="range" id="pos-right-x" class="pos-slider w-full" min="0" max="100" value="20"></div>
+                        <div class="flex items-center gap-2 mt-1"><span class="w-4">Y</span><input type="range" id="pos-right-y" class="pos-slider w-full" min="0" max="100" value="50"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10列輸入區 (由 JS 動態生成) -->
+            <div id="rows-container" class="space-y-4"></div>
+
+        </div>
+    </div>
+
+    <!-- 右側/下半部：即時預覽畫布 -->
+    <div class="w-full h-[35vh] min-h-[250px] lg:h-full lg:w-7/12 lg:flex-1 bg-gray-900 p-2 sm:p-4 lg:p-6 flex flex-col items-center justify-center relative shadow-inner shrink-0">
+        
+        <!-- 預覽區提示文字 -->
+        <div class="absolute top-2 left-4 sm:top-4 sm:left-6 lg:top-6 lg:left-6 z-10 pointer-events-none">
+            <h2 class="text-white text-sm sm:text-base lg:text-xl font-bold drop-shadow-md">即時預覽 (4K 16:9 比例)</h2>
+            <p class="text-gray-400 text-xs lg:text-sm hidden sm:block mt-1">此預覽呈現文字在 3840x2160 桌布中的相對位置。<br class="hidden lg:block">實際下載為透明 PNG。</p>
+        </div>
+        
+        <!-- 畫布容器 (維持 16:9，自適應最大尺寸) -->
+        <div class="max-w-full max-h-full w-full aspect-video border border-gray-600 shadow-2xl relative bg-black flex items-center justify-center overflow-hidden rounded">
+            <canvas id="preview-canvas" class="w-full h-full object-contain"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const W = 3840;
+        const H = 2160;
+        const ROWS_COUNT = 10;
+
+        const colors = [
+            { name: '藍色', value: '#3b82f6' },
+            { name: '綠色', value: '#22c55e' },
+            { name: '紅色', value: '#ef4444' },
+            { name: '黃色', value: '#eab308' }
+        ];
+
+        const directions = [
+            { name: '[下]', value: 'down' },
+            { name: '[上]', value: 'up' },
+            { name: '[左]', value: 'left' },
+            { name: '[右]', value: 'right' }
+        ];
+
+        const strokes = [
+            { name: '白色', value: 'white' },
+            { name: '黑色', value: 'black' }
+        ];
+
+        // 初始化產生 10 列輸入表單
+        function initRows() {
+            const container = document.getElementById('rows-container');
+            let html = '';
+
+            for (let i = 0; i < ROWS_COUNT; i++) {
+                html += `
+                <div class="bg-white border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">列 ${i + 1}</span>
+                        <input type="text" id="text-${i}" class="row-input flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入大聲公內容...">
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-3 items-end">
+                        <div class="flex-1 min-w-[80px]">
+                            <label class="block text-xs text-gray-500 mb-1">方向</label>
+                            <select id="dir-${i}" class="row-input w-full px-2 py-1.5 border rounded">
+                                ${directions.map(d => `<option value="${d.value}">${d.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[80px]">
+                            <label class="block text-xs text-gray-500 mb-1">文字顏色</label>
+                            <select id="color-${i}" class="row-input w-full px-2 py-1.5 border rounded">
+                                ${colors.map(c => `<option value="${c.value}">${c.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[80px]">
+                            <label class="block text-xs text-gray-500 mb-1">邊緣顏色</label>
+                            <select id="stroke-${i}" class="row-input w-full px-2 py-1.5 border rounded">
+                                ${strokes.map(s => `<option value="${s.value}">${s.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="block text-xs text-gray-500 mb-1">字體大小: <span id="size-label-${i}">200</span></label>
+                            <input type="range" id="size-${i}" class="row-input w-full" min="50" max="600" value="200" oninput="document.getElementById('size-label-${i}').innerText = this.value">
+                        </div>
+                        
+                        <button onclick="downloadPNG(${i})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold shadow transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            下載 PNG
+                        </button>
+                    </div>
+                </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // 綁定所有輸入變更事件，以觸發畫布更新
+        function bindEvents() {
+            const inputs = document.querySelectorAll('.row-input, .pos-slider');
+            inputs.forEach(input => {
+                input.addEventListener('input', updatePreview);
+                input.addEventListener('change', updatePreview);
+            });
+        }
+
+        // 根據方向格式化文字
+        function formatText(text, dir) {
+            if (!text) return "";
+            switch (dir) {
+                case 'up': return `\\${text}/`;
+                case 'down': return `/${text}\\`;
+                case 'left': return `${text} >`;
+                case 'right': return `< ${text}`;
+                default: return text;
+            }
+        }
+
+        // 繪製棋盤格背景(作為透明預覽的基底)
+        function drawCheckerboard(ctx) {
+            const size = 64;
+            for (let y = 0; y < H; y += size) {
+                for (let x = 0; x < W; x += size) {
+                    ctx.fillStyle = (x / size + Math.floor(y / size)) % 2 === 0 ? '#1f2937' : '#111827';
+                    ctx.fillRect(x, y, size, size);
+                }
+            }
+        }
+
+        // 繪製位置標記點
+        function drawMarkers(ctx, pos) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([15, 15]);
+
+            Object.keys(pos).forEach(dir => {
+                const x = (pos[dir].x / 100) * W;
+                const y = (pos[dir].y / 100) * H;
+
+                // 畫十字線
+                ctx.beginPath();
+                ctx.moveTo(x - 100, y);
+                ctx.lineTo(x + 100, y);
+                ctx.moveTo(x, y - 100);
+                ctx.lineTo(x, y + 100);
+                ctx.stroke();
+
+                // 標示文字
+                ctx.font = '40px "Microsoft JhengHei", sans-serif';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'bottom';
+                
+                let dirName = '';
+                if(dir==='up') dirName='[上]';
+                if(dir==='down') dirName='[下]';
+                if(dir==='left') dirName='[左]';
+                if(dir==='right') dirName='[右]';
+                ctx.fillText(dirName, x + 20, y - 20);
+            });
+            ctx.setLineDash([]); 
+        }
+
+        // 在畫布上畫出大聲公文字
+        function drawMegaphoneText(ctx, text, dir, color, stroke, size, x, y) {
+            const str = formatText(text, dir);
+
+            ctx.font = `900 ${size}px "Microsoft JhengHei", "PingFang TC", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+
+            // 外框線
+            ctx.strokeStyle = stroke === 'white' ? '#FFFFFF' : '#000000';
+            ctx.lineWidth = size * 0.15; // 邊框粗細依字體比例調整
+            ctx.strokeText(str, x, y);
+
+            // 內文字
+            ctx.fillStyle = color;
+            ctx.fillText(str, x, y);
+        }
+
+        // 取得當前設定的所有虛擬位置
+        function getPositions() {
+            return {
+                up: { x: document.getElementById('pos-up-x').value, y: document.getElementById('pos-up-y').value },
+                down: { x: document.getElementById('pos-down-x').value, y: document.getElementById('pos-down-y').value },
+                left: { x: document.getElementById('pos-left-x').value, y: document.getElementById('pos-left-y').value },
+                right: { x: document.getElementById('pos-right-x').value, y: document.getElementById('pos-right-y').value }
+            };
+        }
+
+        // 更新右側預覽畫面
+        function updatePreview() {
+            const canvas = document.getElementById('preview-canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // 1. 清空並畫背景
+            ctx.clearRect(0, 0, W, H);
+            drawCheckerboard(ctx);
+
+            // 2. 畫十字對齊線與標籤
+            const pos = getPositions();
+            drawMarkers(ctx, pos);
+
+            // 3. 畫出所有有輸入內容的列
+            for (let i = 0; i < ROWS_COUNT; i++) {
+                const text = document.getElementById(`text-${i}`).value.trim();
+                if (!text) continue;
+
+                const dir = document.getElementById(`dir-${i}`).value;
+                const color = document.getElementById(`color-${i}`).value;
+                const stroke = document.getElementById(`stroke-${i}`).value;
+                const size = document.getElementById(`size-${i}`).value;
+
+                const x = (pos[dir].x / 100) * W;
+                const y = (pos[dir].y / 100) * H;
+
+                drawMegaphoneText(ctx, text, dir, color, stroke, size, x, y);
+            }
+        }
+
+        // 獨立下載特定一列的 PNG (透明背景)
+        function downloadPNG(index) {
+            let title = document.getElementById('main-title').value.trim();
+            if(!title) title = "大聲公";
+
+            const text = document.getElementById(`text-${index}`).value.trim();
+            if (!text) {
+                alert('請先輸入這列的大聲公內容！');
+                return;
+            }
+
+            const dir = document.getElementById(`dir-${index}`).value;
+            const color = document.getElementById(`color-${index}`).value;
+            const stroke = document.getElementById(`stroke-${index}`).value;
+            const size = document.getElementById(`size-${index}`).value;
+
+            const pos = getPositions()[dir];
+            const x = (pos.x / 100) * W;
+            const y = (pos.y / 100) * H;
+
+            // 建立離線畫布 (專門用來匯出透明背景)
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = W;
+            offCanvas.height = H;
+            const offCtx = offCanvas.getContext('2d');
+            
+            // 這裡不畫棋盤格背景，保留完全透明
+            drawMegaphoneText(offCtx, text, dir, color, stroke, size, x, y);
+
+            // 觸發下載
+            const dataUrl = offCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `${title}_列${index + 1}.png`;
+            link.href = dataUrl;
+            link.click();
+        }
+
+        // 初始化啟動
+        window.onload = () => {
+            initRows();
+            bindEvents();
+            updatePreview();
+        };
+    </script>
+</body>
+</html>
