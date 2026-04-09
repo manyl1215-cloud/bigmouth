@@ -127,7 +127,7 @@
 
         // 狀態管理與分頁設定
         const ROWS_PER_PAGE = 10;
-        const defaultRow = { text: '', dir: 'down', color: '#ffffff', stroke: '#000080', size: 200 };
+        const defaultRow = { text: '', dir: 'down', color: '#ffffff', stroke: '#000080', size: 200, visible: true };
         let rowsData = [];
         let currentPage = 1;
 
@@ -174,8 +174,12 @@
                 html += `
                 <div class="bg-white border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex items-center gap-2 mb-3">
-                        <span class="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">列 ${i + 1}</span>
+                        <span class="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded shrink-0">列 ${i + 1}</span>
                         <input type="text" id="text-${i}" value="${row.text}" oninput="updateRowData(${i}, 'text', this.value)" class="row-input flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入大聲公內容...">
+                        <label class="flex items-center gap-1 text-sm font-bold text-gray-600 hover:text-gray-900 cursor-pointer shrink-0 ml-1 bg-gray-100 px-2 py-1.5 rounded border border-gray-200">
+                            <input type="checkbox" id="visible-${i}" onchange="updateRowData(${i}, 'visible', this.checked)" ${row.visible ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                            <span class="select-none">顯示預覽</span>
+                        </label>
                     </div>
                     
                     <div class="flex flex-wrap gap-3 items-end">
@@ -490,13 +494,13 @@
             const pos = getPositions();
             drawMarkers(ctx, pos);
 
-            // 3. 畫出目前頁面所有有輸入內容的列
+            // 3. 畫出目前頁面所有有輸入內容且設定為顯示的列
             const start = (currentPage - 1) * ROWS_PER_PAGE;
             const end = start + ROWS_PER_PAGE;
 
             for (let i = start; i < end; i++) {
                 const row = rowsData[i];
-                if (!row.text.trim()) continue;
+                if (!row.text.trim() || row.visible === false) continue;
 
                 const x = (pos[row.dir].x / 100) * W;
                 const y = (pos[row.dir].y / 100) * H;
